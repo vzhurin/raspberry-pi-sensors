@@ -1,13 +1,16 @@
 package main
 
 import (
-	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"log"
+	"net/http"
 	"periph.io/x/conn/v3/i2c"
 	"periph.io/x/conn/v3/i2c/i2creg"
 	"periph.io/x/conn/v3/physic"
 	"periph.io/x/devices/v3/bmxx80"
 	"periph.io/x/host/v3"
+	"time"
 )
 
 const i2cBus = "1"
@@ -31,12 +34,13 @@ func main() {
 	}
 	defer device.Halt()
 
-	env, err := newEnv(device)
-	if err != nil {
-		log.Fatal(err)
-	}
+	//fmt.Printf("%8s %10s %9s\n", env.Temperature, env.Pressure, env.Humidity)
 
-	fmt.Printf("%8s %10s %9s\n", env.Temperature, env.Pressure, env.Humidity)
+	collector := newPrometheusCollector(device)
+	prometheus.MustRegister(collector)
+
+	http.Handle("/metrics", promhttp.Handler())
+	log.Fatal(http.ListenAndServe(":9101", nil))
 }
 
 func initHost() error {
@@ -77,4 +81,48 @@ func newEnv(device *bmxx80.Dev) (*physic.Env, error) {
 	}
 
 	return &env, nil
+}
+
+type prometheusCollector struct {
+	temperatureMetric *prometheus.Desc
+	pressureMetric    *prometheus.Desc
+	humidityMetric    *prometheus.Desc
+
+	device *bmxx80.Dev
+}
+
+func newPrometheusCollector(device *bmxx80.Dev) *prometheusCollector {
+	return &prometheusCollector{
+		temperatureMetric: prometheus.NewDesc("Temperature", "Shows temperature", nil, nil),
+		pressureMetric:    prometheus.NewDesc("Pressure", "Shows pressure", nil, nil),
+		humidityMetric:    prometheus.NewDesc("Humidity", "Shows humidity", nil, nil),
+
+		device: device,
+	}
+}
+
+func (c *prometheusCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- c.temperatureMetric
+	ch <- c.pressureMetric
+	ch <- c.humidityMetric
+}
+
+func (c *prometheusCollector) Collect(ch chan<- prometheus.Metric) {
+	var env physic.Env
+	if err := c.device.Sense(&env); err != nil {
+		panic(err)
+	}
+
+	temperature := prometheus.MustNewConstMetric(c.temperatureMetric, prometheus.GaugeValue, float64(env.Temperature))
+	temperature = prometheus.NewMetricWithTimestamp(time.Now(), temperature)
+
+	pressure := prometheus.MustNewConstMetric(c.pressureMetric, prometheus.GaugeValue, float64(env.Pressure))
+	pressure = prometheus.NewMetricWithTimestamp(time.Now(), pressure)
+
+	humidity := prometheus.MustNewConstMetric(c.humidityMetric, prometheus.GaugeValue, float64(env.Humidity))
+	humidity = prometheus.NewMetricWithTimestamp(time.Now(), humidity)
+
+	ch <- temperature
+	ch <- pressure
+	ch <- humidity
 }
