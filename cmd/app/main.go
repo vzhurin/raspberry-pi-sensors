@@ -10,11 +10,13 @@ import (
 	"periph.io/x/conn/v3/physic"
 	"periph.io/x/devices/v3/bmxx80"
 	"periph.io/x/host/v3"
+	"strconv"
 	"time"
 )
 
 const i2cBus = "1"
 const bme280I2cAddress = 0x76
+const metricsPort = 9101
 
 func main() {
 	err := initHost()
@@ -34,13 +36,11 @@ func main() {
 	}
 	defer device.Halt()
 
-	//fmt.Printf("%8s %10s %9s\n", env.Temperature, env.Pressure, env.Humidity)
-
 	collector := newPrometheusCollector(device)
 	prometheus.MustRegister(collector)
 
 	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(":9101", nil))
+	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(metricsPort), nil))
 }
 
 func initHost() error {
