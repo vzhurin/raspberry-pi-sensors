@@ -41,7 +41,7 @@ func newPrometheusCollector(requests chan<- bme.Request, ttl int) *prometheusCol
 		temperatureMetric:   prometheus.NewDesc("Temperature", "Shows temperature", nil, nil),
 		pressureMetric:      prometheus.NewDesc("Pressure", "Shows pressure", nil, nil),
 		humidityMetric:      prometheus.NewDesc("Humidity", "Shows humidity", nil, nil),
-		gasResistanceMetric: prometheus.NewDesc("Gas resistance", "Shows gas resistance", nil, nil),
+		gasResistanceMetric: prometheus.NewDesc("Gas", "Shows gas resistance", nil, nil),
 
 		requests: requests,
 		ttl:      ttl,
