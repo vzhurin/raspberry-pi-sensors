@@ -1,13 +1,15 @@
 package main
 
 import (
+	"log"
+	"net/http"
+	"raspberry-pi-3-sensors/internal/waterius"
+	"strconv"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.eqrx.net/mauzr/pkg/bme"
-	"log"
-	"net/http"
-	"strconv"
-	"time"
 )
 
 const i2cBus = "1"
@@ -23,6 +25,14 @@ func main() {
 	prometheus.MustRegister(collector)
 
 	http.Handle("/metrics", promhttp.Handler())
+
+	db := waterius.NewDB()
+	wateriusCollector := waterius.NewPrometheusCollector(db)
+	prometheus.MustRegister(wateriusCollector)
+
+	wateriusHTTPHandler := waterius.NewHTTPHandler(db)
+	http.Handle("/waterius/", wateriusHTTPHandler)
+
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(metricsPort), nil))
 }
 
