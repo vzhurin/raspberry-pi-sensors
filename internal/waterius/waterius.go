@@ -71,21 +71,10 @@ func NewPrometheusCollector(db *DB) *PrometheusCollector {
 	}
 }
 
-func (c *PrometheusCollector) Describe(ch chan<- *prometheus.Desc) {
-	for room, _ := range c.db.SelAll() {
-		nameCh0 := fmt.Sprintf("%s_ch0", room)
-		nameCh1 := fmt.Sprintf("%s_ch1", room)
-		nameBattery := fmt.Sprintf("%s_battery", room)
-
-		ch <- prometheus.NewDesc(nameCh0, nameCh0, nil, nil)
-		ch <- prometheus.NewDesc(nameCh1, nameCh1, nil, nil)
-		ch <- prometheus.NewDesc(nameBattery, nameBattery, nil, nil)
-	}
-}
+func (c *PrometheusCollector) Describe(ch chan<- *prometheus.Desc) {}
 
 func (c *PrometheusCollector) Collect(ch chan<- prometheus.Metric) {
 	for room, values := range c.db.SelAll() {
-
 		nameCh0 := fmt.Sprintf("%s_ch0", room)
 		nameCh1 := fmt.Sprintf("%s_ch1", room)
 		nameBattery := fmt.Sprintf("%s_battery", room)
@@ -133,6 +122,13 @@ func NewHTTPHandler(db *DB) *HTTPHandler {
 	}
 }
 func (h *HTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		_, _ = w.Write([]byte("only POST method is allowed"))
+
+		return
+	}
+
 	path := strings.Split(r.URL.Path, "/")
 	if len(path) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
