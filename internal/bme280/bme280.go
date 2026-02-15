@@ -6,38 +6,16 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"periph.io/x/conn/v3/i2c/i2creg"
+	"periph.io/x/conn/v3/i2c"
 	"periph.io/x/conn/v3/physic"
 	"periph.io/x/devices/v3/bmxx80"
-	"periph.io/x/host/v3"
 )
 
-func NewDevice(i2cBus string, i2cAddress uint16) (*bmxx80.Dev, error) {
-	if _, err := host.Init(); err != nil {
-		return nil, err
-	}
-
-	bus, err := i2creg.Open(i2cBus)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		err := bus.Close()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
+func NewDevice(bus i2c.Bus, i2cAddress uint16) (*bmxx80.Dev, error) {
 	device, err := bmxx80.NewI2C(bus, i2cAddress, &bmxx80.DefaultOpts)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err := device.Halt()
-		if err != nil {
-			panic(err)
-		}
-	}()
 
 	return device, nil
 }
