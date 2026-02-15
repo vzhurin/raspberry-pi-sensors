@@ -13,8 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: wangyoucao577/go-release-action@v1
-        env:
-          CGO_ENABLED: 0
         with:
           project_path: "./cmd"
           github_token: ${{ secrets.GITHUB_TOKEN }}
